@@ -4,6 +4,23 @@ A command-line tool to export and analyze Help Scout conversations.
 
 ## Installation
 
+### Option 1: Standalone Executable (Recommended for non-technical users)
+
+1. Download the executable for your platform:
+   - Windows: `helpscout-exporter.exe`
+   - Mac/Linux: `helpscout-exporter`
+
+2. Run the setup wizard:
+   ```
+   # Windows
+   helpscout-exporter.exe setup
+   
+   # Mac/Linux
+   ./helpscout-exporter setup
+   ```
+
+### Option 2: From Source
+
 1. Clone this repository:
    ```
    git clone https://github.com/yourusername/helpscout-exporter.git
