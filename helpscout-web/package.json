@@ -1,5 +1,33 @@
 {
   "dependencies": {
     "ws": "^8.18.1"
+  },
+  "scripts": {
+    "package-mac": "electron-builder --mac",
+    "package-all": "electron-builder -mwl"
+  },
+  "build": {
+    "appId": "com.yourcompany.helpscout-web",
+    "productName": "Help Scout Exporter",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "backend/dist/**/*",
+      "frontend/dist/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "electron/icon.icns"
+    }
+  },
+  "devDependencies": {
+    "electron-notarize": "^1.2.2"
   }
 }

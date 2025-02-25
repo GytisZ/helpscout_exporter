@@ -55,3 +55,41 @@ A web-based interface for exporting and analyzing Help Scout conversations.
 ## Building for Production
 
 ### Backend 
+
+## Building for macOS Distribution
+
+To build the app for macOS distribution:
+
+1. Run the macOS build script:
+   ```
+   node build-mac.js
+   ```
+
+2. When prompted, choose whether to notarize the app with Apple:
+   - Notarization requires an Apple Developer account
+   - You'll need your Apple ID and an app-specific password
+   - Notarization can take several minutes to complete
+
+3. The built app will be available in `electron/dist/`
+
+### For macOS Users
+
+When users download and try to open the app, they might see security warnings:
+
+#### If the app is notarized:
+1. Right-click (or Control-click) on the app
+2. Select "Open" from the context menu
+3. Click "Open" in the dialog that appears
+4. The app should now open and future launches won't show warnings
+
+#### If the app is not notarized:
+1. Right-click (or Control-click) on the app
+2. Select "Open" from the context menu
+3. Click "Open" in the dialog that appears
+4. If this doesn't work, open System Preferences > Security & Privacy
+5. Look for a message about the blocked app and click "Open Anyway"
+
+#### Alternative method using Terminal:
+```bash
+xattr -d com.apple.quarantine /path/to/Help\ Scout\ Exporter.app
+```

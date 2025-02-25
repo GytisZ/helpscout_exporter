@@ -41,8 +41,14 @@
         "mac": {
             "category": "public.app-category.productivity",
             "target": [
-                "dmg"
-            ]
+                "dmg",
+                "zip"
+            ],
+            "hardenedRuntime": true,
+            "gatekeeperAssess": false,
+            "entitlements": "entitlements.plist",
+            "entitlementsInherit": "entitlements.plist",
+            "darkModeSupport": true
         },
         "win": {
             "target": [
@@ -54,11 +60,28 @@
                 "AppImage"
             ],
             "category": "Office"
-        }
+        },
+        "dmg": {
+            "sign": false,
+            "contents": [
+                {
+                    "x": 130,
+                    "y": 220
+                },
+                {
+                    "x": 410,
+                    "y": 220,
+                    "type": "link",
+                    "path": "/Applications"
+                }
+            ]
+        },
+        "afterSign": "scripts/notarize.js"
     },
     "devDependencies": {
         "electron": "^28.3.3",
-        "electron-builder": "^24.13.3"
+        "electron-builder": "^24.13.3",
+        "electron-notarize": "^1.2.2"
     },
     "keywords": []
 }
