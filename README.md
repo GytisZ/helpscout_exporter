@@ -2,12 +2,15 @@
 
 A command-line tool to export and analyze Help Scout conversations.
 
+This repository contains both a command-line tool and a web-based interface for exporting Help Scout conversations.
+
 ## Installation
+
+### Command-Line Tool
 
 ### Option 1: Standalone Executable (Recommended for non-technical users)
 
 1. Download the executable for your platform:
-   - Windows: `helpscout-exporter.exe`
    - Mac/Linux: `helpscout-exporter`
 
 2. Run the setup wizard:
@@ -35,6 +38,22 @@ A command-line tool to export and analyze Help Scout conversations.
 3. Run the setup wizard:
    ```   python main.py setup
    ```
+
+### Web Interface
+
+For non-technical users, we also provide a web-based interface. See the [helpscout-web](./helpscout-web) directory for setup instructions.
+
+### Desktop Application
+
+For the easiest experience, download the desktop application:
+
+1. Go to the [Releases](https://github.com/yourusername/helpscout-exporter/releases) page
+2. Download the appropriate installer for your platform:
+    - Windows: `Help-Scout-Exporter-Setup-x.x.x.exe`
+    - macOS: `Help-Scout-Exporter-x.x.x.dmg`
+    - Linux: `Help-Scout-Exporter-x.x.x.AppImage`
+3. Run the installer and follow the prompts
+4. Launch the application from your desktop or start menu
 
 ## Getting Help Scout API Credentials
 
@@ -73,4 +92,21 @@ python main.py fetch --from 2023-01-01 --tag "preorder & presale" --output-dir m
 ```
 python main.py list-tags
 ```
+
+### macOS Security Warning
+
+If you see a security warning on macOS:
+
+1. **Method 1: Using Finder**
+   - Right-click (or Control-click) on the executable
+   - Select "Open" from the context menu
+   - Click "Open" in the dialog that appears
+
+2. **Method 2: Using Terminal**
+   - After downloading, run:
+     ```
+     chmod +x helpscout-exporter
+     xattr -d com.apple.quarantine helpscout-exporter
+     ./helpscout-exporter setup
+     ```
 

@@ -1,0 +1,15 @@
+# Build output
+dist/
+build/
+out/
+release/
+
+# Packaged apps
+*.app
+*.exe
+*.dmg
+*.zip
+*.tar.gz
+
+# Generated files
+frontend/ 
