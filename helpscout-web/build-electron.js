@@ -18,6 +18,19 @@ if (!fs.existsSync(scriptsDir)) {
   fs.mkdirSync(scriptsDir, { recursive: true });
 }
 
+// Build backend
+console.log('Building backend...');
+const backendDir = path.join(rootDir, 'backend');
+execSync('npm run build', { cwd: backendDir, stdio: 'inherit' });
+
+// Copy backend build to electron directory
+console.log('Copying backend build to electron directory...');
+const electronBackendDir = path.join(electronDir, 'backend');
+if (!fs.existsSync(electronBackendDir)) {
+  fs.mkdirSync(electronBackendDir, { recursive: true });
+}
+execSync(`cp ${backendDir}/dist/server.js ${electronBackendDir}/server.js`, { stdio: 'inherit' });
+
 // Build frontend
 console.log('Building frontend...');
 execSync('npm run build', { cwd: frontendDir, stdio: 'inherit' });

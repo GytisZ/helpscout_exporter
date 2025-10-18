@@ -94,18 +94,47 @@ python main.py list-tags
 
 ### macOS Security Warning
 
-If you see a security warning on macOS:
+⚠️ **Important for macOS users**: Because this app is not code-signed with an Apple Developer certificate, macOS will block it with this message:
 
-1. **Method 1: Using Finder**
-   - Right-click (or Control-click) on the executable
-   - Select "Open" from the context menu
-   - Click "Open" in the dialog that appears
+> "Apple could not verify 'Help Scout Exporter' is free of malware that may harm your Mac or compromise your privacy."
 
-2. **Method 2: Using Terminal**
-   - After downloading, run:
-     ```
-     chmod +x helpscout-exporter
-     xattr -d com.apple.quarantine helpscout-exporter
-     ./helpscout-exporter setup
-     ```
+**This is normal and the app is safe.** Here's how to open it:
+
+#### For Desktop App (.dmg):
+
+**Important**: Double-clicking won't work the first time. You must use one of these methods:
+
+**Method 1: System Settings (Easiest)**
+1. Try to open the app (you'll see the security warning)
+2. Open **System Settings** (or **System Preferences** on older macOS)
+3. Go to **Privacy & Security**
+4. Scroll down to the Security section
+5. You'll see a message about "Help Scout Exporter" being blocked
+6. Click **"Open Anyway"**
+7. Click **"Open"** in the confirmation dialog
+8. The app will launch and macOS will remember it's safe
+
+**Method 2: Right-Click to Open**
+1. Open your **Applications** folder
+2. Find "Help Scout Exporter"
+3. **Right-click (or Control-click)** on it
+4. Select **"Open"** from the menu
+5. A new dialog appears with an **"Open"** button - click it
+6. The app will launch and macOS will remember it's safe
+
+**Method 3: Terminal Command**
+```bash
+xattr -cr "/Applications/Help Scout Exporter.app"
+```
+Then double-click the app normally.
+
+After the first launch using any method, you can open the app normally anytime.
+
+#### For Command-Line Tool:
+After downloading, run:
+```bash
+chmod +x helpscout-exporter
+xattr -d com.apple.quarantine helpscout-exporter
+./helpscout-exporter setup
+```
 
