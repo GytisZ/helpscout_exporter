@@ -11,11 +11,11 @@ const scriptsDir = path.join(electronDir, 'scripts');
 
 // Ensure directories exist
 if (!fs.existsSync(electronFrontendDir)) {
-    fs.mkdirSync(electronFrontendDir, { recursive: true });
+  fs.mkdirSync(electronFrontendDir, { recursive: true });
 }
 
 if (!fs.existsSync(scriptsDir)) {
-    fs.mkdirSync(scriptsDir, { recursive: true });
+  fs.mkdirSync(scriptsDir, { recursive: true });
 }
 
 // Build frontend
@@ -29,14 +29,15 @@ execSync(`cp -r ${frontendDir}/dist/* ${electronFrontendDir}`, { stdio: 'inherit
 // Install dependencies in electron directory
 console.log('Installing electron dependencies...');
 execSync('npm install electron-store@8.1.0', { cwd: electronDir, stdio: 'inherit' });
+execSync('npm install ws@8.16.0', { cwd: electronDir, stdio: 'inherit' });
 execSync('npm install electron-notarize --save-dev', { cwd: electronDir, stdio: 'inherit' });
 execSync('npm install', { cwd: electronDir, stdio: 'inherit' });
 
 // Create entitlements file if it doesn't exist
 const entitlementsPath = path.join(electronDir, 'entitlements.plist');
 if (!fs.existsSync(entitlementsPath)) {
-    console.log('Creating entitlements.plist...');
-    fs.writeFileSync(entitlementsPath, `<?xml version="1.0" encoding="UTF-8"?>
+  console.log('Creating entitlements.plist...');
+  fs.writeFileSync(entitlementsPath, `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
   <dict>
@@ -55,8 +56,8 @@ if (!fs.existsSync(entitlementsPath)) {
 // Create notarization script if it doesn't exist
 const notarizeScriptPath = path.join(scriptsDir, 'notarize.js');
 if (!fs.existsSync(notarizeScriptPath)) {
-    console.log('Creating notarize.js script...');
-    fs.writeFileSync(notarizeScriptPath, `const { notarize } = require('electron-notarize');
+  console.log('Creating notarize.js script...');
+  fs.writeFileSync(notarizeScriptPath, `const { notarize } = require('electron-notarize');
 const { build } = require('../package.json');
 
 exports.default = async function notarizing(context) {

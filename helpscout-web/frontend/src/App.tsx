@@ -420,9 +420,21 @@ function App() {
 
         messagesString = sortedThreads
           .map(thread => {
-            // Skip system messages and notes if needed
+            // Skip system messages
             if (thread.type === 'lineitem') {
-              return ''; // Skip system messages
+              return '';
+            }
+
+            // Skip automatic technical information notes from beacon/system
+            if (thread.type === 'note' && thread.body && (
+              thread.body.includes('Technical Information') ||
+              thread.body.includes('IP Address') ||
+              thread.body.includes('Beacon History') ||
+              thread.body.includes('Site Information') ||
+              thread.body.includes('Browser/Version') ||
+              thread.body.includes('Authentication Mode')
+            )) {
+              return '';
             }
 
             // Format the message with sender and timestamp
@@ -439,12 +451,15 @@ function App() {
               prefix = `[SYSTEM]: `;
             }
 
-            // Clean the message body
-            const body = thread.body
-              ?.replace(/"/g, '""') // Escape quotes for CSV
-              .replace(/\n/g, ' ') // Replace newlines with spaces
+            // Clean the message body - convert HTML to readable text
+            const cleanBody = cleanHtmlToText(thread.body || '');
+
+            // Now prepare for CSV - escape quotes and handle newlines
+            const body = cleanBody
+              .replace(/"/g, '""') // Escape quotes for CSV
+              .replace(/\n/g, ' ') // Replace newlines with spaces for CSV
               .replace(/\r/g, '') // Remove carriage returns
-              .trim() || '';
+              .trim();
 
             return `[${timestamp}] ${prefix}${body}`;
           })
@@ -501,6 +516,82 @@ function App() {
       });
     }
     setIsAuthenticated(false);
+  };
+
+  // Helper function to clean HTML and convert to readable text
+  const cleanHtmlToText = (html: string): string => {
+    if (!html) return '';
+
+    // Create a temporary div to parse HTML
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+
+    // Remove script and style elements
+    const scripts = temp.querySelectorAll('script, style');
+    scripts.forEach(script => script.remove());
+
+    // Replace common HTML elements with readable equivalents
+    // Replace <br> tags with newlines
+    temp.innerHTML = temp.innerHTML.replace(/<br\s*\/?>/gi, '\n');
+
+    // Replace </p> and </div> with double newlines for paragraph separation
+    temp.innerHTML = temp.innerHTML.replace(/<\/(p|div)>/gi, '\n\n');
+
+    // Replace list items with bullets
+    temp.innerHTML = temp.innerHTML.replace(/<li>/gi, '\n• ');
+
+    // Handle links - show URL in parentheses
+    const links = temp.querySelectorAll('a');
+    links.forEach(link => {
+      const href = link.getAttribute('href');
+      const text = link.textContent;
+      if (href && href !== text) {
+        link.textContent = `${text} (${href})`;
+      }
+    });
+
+    // Handle images - show alt text or indicate image
+    const images = temp.querySelectorAll('img');
+    images.forEach(img => {
+      const alt = img.getAttribute('alt');
+      const src = img.getAttribute('src');
+      if (alt) {
+        img.replaceWith(document.createTextNode(`[Image: ${alt}]`));
+      } else if (src) {
+        img.replaceWith(document.createTextNode(`[Image]`));
+      }
+    });
+
+    // Handle tables - convert to simple format
+    const tables = temp.querySelectorAll('table');
+    tables.forEach(table => {
+      const rows = table.querySelectorAll('tr');
+      let tableText = '\n';
+      rows.forEach(row => {
+        const cells = row.querySelectorAll('td, th');
+        const cellTexts: string[] = [];
+        cells.forEach(cell => {
+          cellTexts.push(cell.textContent?.trim() || '');
+        });
+        tableText += cellTexts.join(' | ') + '\n';
+      });
+      table.replaceWith(document.createTextNode(tableText));
+    });
+
+    // Get text content
+    let text = temp.textContent || '';
+
+    // Clean up whitespace
+    // Replace multiple spaces with single space
+    text = text.replace(/ +/g, ' ');
+    // Replace multiple newlines with double newline (max)
+    text = text.replace(/\n\s*\n\s*\n+/g, '\n\n');
+    // Trim each line
+    text = text.split('\n').map(line => line.trim()).join('\n');
+    // Trim the whole text
+    text = text.trim();
+
+    return text;
   };
 
   return (

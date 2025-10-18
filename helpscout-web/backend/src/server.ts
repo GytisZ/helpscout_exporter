@@ -208,7 +208,8 @@ app.get('/api/conversations', async (req, res) => {
                         };
                     }
                 } catch (error) {
-                    console.error(`Error fetching threads for conversation ${conversation.id}:`, error.message);
+                    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                    console.error(`Error fetching threads for conversation ${conversation.id}:`, errorMessage);
                     // Continue with the next conversation even if this one fails
                 }
             }

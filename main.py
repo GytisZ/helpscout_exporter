@@ -526,7 +526,19 @@ def export_conversations(
         
         for thread in threads:
             # Skip certain thread types
-            if thread.get('type') in ['lineitem', 'note']:
+            if thread.get('type') == 'lineitem':
+                continue
+            
+            # Skip automatic technical information notes from beacon/system
+            body = thread.get('body', '')
+            if thread.get('type') == 'note' and any(keyword in body for keyword in [
+                'Technical Information',
+                'IP Address',
+                'Beacon History',
+                'Site Information',
+                'Browser/Version',
+                'Authentication Mode'
+            ]):
                 continue
             
             # Get message date
@@ -534,23 +546,48 @@ def export_conversations(
             if created_at_str:
                 # Format date for readability
                 message_date = datetime.fromisoformat(created_at_str.replace('Z', '+00:00'))
-                date_str = message_date.strftime("%Y-%m-%d %H:%M")
+                date_str = message_date.strftime("%d/%m/%Y, %H:%M:%S")
             else:
                 date_str = "Unknown date"
             
-            # Determine message type by checking creator type
+            # Determine message type and sender
+            thread_type = thread.get('type', '')
             created_by = thread.get('createdBy', {})
-            sender_type = 'Customer' if created_by.get('type') == 'customer' else 'Support'
+            
+            # Format sender type like the web app
+            if thread_type == 'note':
+                sender_name = created_by.get('first', 'Agent')
+                sender_type = f'NOTE] {sender_name}'
+            elif created_by.get('type') == 'customer':
+                sender_name = created_by.get('first', 'Customer')
+                sender_type = f'CUSTOMER] {sender_name}'
+            elif created_by.get('type') == 'user':
+                sender_name = created_by.get('first', 'Agent')
+                sender_type = f'AGENT] {sender_name}'
+            else:
+                sender_type = 'SYSTEM'
             
             # Get message body and clean HTML
             body = thread.get('body', '')
-            # Parse HTML and get text only
             soup = BeautifulSoup(body, 'html.parser')
-            # Get text and normalize whitespace
+            
+            # Show URLs for links (adds useful context)
+            for link in soup.find_all('a'):
+                href = link.get('href', '')
+                text = link.get_text()
+                if href and href != text:
+                    link.replace_with(f'{text} ({href})')
+            
+            # Show image descriptions (adds useful context)
+            for img in soup.find_all('img'):
+                alt = img.get('alt', '')
+                img.replace_with(f'[Image: {alt}]' if alt else '[Image]')
+            
+            # Get text content and normalize whitespace
             clean_body = ' '.join(soup.get_text().split())
             
             # Add formatted message to conversation parts
-            conversation_parts.append(f"[{date_str}] {sender_type}: {clean_body}")
+            conversation_parts.append(f"[{date_str}] [{sender_type}: {clean_body}")
         
         # Join all messages with newlines
         full_conversation_text = "\n\n".join(conversation_parts)
