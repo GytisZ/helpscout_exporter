@@ -49,6 +49,61 @@ function broadcastProgress(message: string, data: any = {}) {
     });
 }
 
+// Helper function to make API requests with rate limit handling
+async function makeRateLimitedRequest(url: string, token: string, params?: any, maxRetries = 3): Promise<any> {
+    let retries = 0;
+
+    while (retries <= maxRetries) {
+        try {
+            const response = await axios.get(url, {
+                params,
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            // Log rate limit info if available
+            const rateLimitRemaining = response.headers['x-ratelimit-remaining-minute'];
+            const rateLimitLimit = response.headers['x-ratelimit-limit-minute'];
+
+            if (rateLimitRemaining && rateLimitLimit) {
+                console.log(`Rate limit: ${rateLimitRemaining}/${rateLimitLimit} remaining`);
+            }
+
+            return response;
+        } catch (error: any) {
+            // Check if it's a rate limit error (429)
+            if (error.response && error.response.status === 429) {
+                retries++;
+
+                // Get retry-after header (in seconds)
+                const retryAfter = parseInt(error.response.headers['x-ratelimit-retry-after'] || '60', 10);
+
+                if (retries <= maxRetries) {
+                    const waitTime = retryAfter * 1000; // Convert to milliseconds
+                    console.log(`Rate limit hit. Waiting ${retryAfter} seconds before retry ${retries}/${maxRetries}...`);
+                    broadcastProgress(`Rate limit reached. Pausing for ${retryAfter} seconds...`, {
+                        rateLimitPause: true,
+                        retryAfter,
+                        attempt: retries,
+                        maxRetries
+                    });
+
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                    continue; // Retry the request
+                } else {
+                    throw new Error(`Rate limit exceeded after ${maxRetries} retries`);
+                }
+            }
+
+            // For other errors, throw immediately
+            throw error;
+        }
+    }
+
+    throw new Error('Max retries exceeded');
+}
+
 // Authentication endpoint
 app.post('/api/auth', async (req, res) => {
     try {
@@ -125,11 +180,10 @@ app.get('/api/conversations', async (req, res) => {
             broadcastProgress('Fetching tags information...');
 
             // First, get all tags to map slugs to display names
-            const tagsResponse = await axios.get('https://api.helpscout.net/v2/tags', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            const tagsResponse = await makeRateLimitedRequest(
+                'https://api.helpscout.net/v2/tags',
+                token
+            );
 
             const allTagsData = tagsResponse.data._embedded?.tags || [];
             const tagMap = new Map();
@@ -179,39 +233,43 @@ app.get('/api/conversations', async (req, res) => {
                 progress: 0
             });
 
-            for (let i = 0; i < allConversations.length; i++) {
-                const conversation = allConversations[i];
+            // Fetch threads in parallel batches for better performance
+            const BATCH_SIZE = 10; // Process 10 conversations at a time
+            let completed = 0;
 
-                try {
-                    // Log progress periodically
-                    if (i % 10 === 0 || i === allConversations.length - 1) {
-                        const progress = Math.round((i / allConversations.length) * 100);
-                        console.log(`Fetching threads for conversation ${i + 1}/${allConversations.length} (${progress}%)`);
-                        broadcastProgress(`Fetching threads for conversation ${i + 1}/${allConversations.length}`, {
-                            progress,
-                            current: i + 1,
-                            total: allConversations.length
-                        });
-                    }
+            for (let i = 0; i < allConversations.length; i += BATCH_SIZE) {
+                const batch = allConversations.slice(i, i + BATCH_SIZE);
 
-                    // Fetch threads for this conversation
-                    const threadsResponse = await axios.get(`https://api.helpscout.net/v2/conversations/${conversation.id}/threads`, {
-                        headers: {
-                            'Authorization': `Bearer ${token}`
+                // Fetch all threads in this batch in parallel
+                await Promise.all(batch.map(async (conversation) => {
+                    try {
+                        // Fetch threads for this conversation with rate limit handling
+                        const threadsResponse = await makeRateLimitedRequest(
+                            `https://api.helpscout.net/v2/conversations/${conversation.id}/threads`,
+                            token
+                        );
+
+                        // Add threads to the conversation
+                        if (threadsResponse.data._embedded && Array.isArray(threadsResponse.data._embedded.threads)) {
+                            conversation._embedded = {
+                                threads: threadsResponse.data._embedded.threads
+                            };
                         }
-                    });
-
-                    // Add threads to the conversation
-                    if (threadsResponse.data._embedded && Array.isArray(threadsResponse.data._embedded.threads)) {
-                        conversation._embedded = {
-                            threads: threadsResponse.data._embedded.threads
-                        };
+                    } catch (error) {
+                        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                        console.error(`Error fetching threads for conversation ${conversation.id}:`, errorMessage);
+                        // Continue with the next conversation even if this one fails
                     }
-                } catch (error) {
-                    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                    console.error(`Error fetching threads for conversation ${conversation.id}:`, errorMessage);
-                    // Continue with the next conversation even if this one fails
-                }
+                }));
+
+                completed += batch.length;
+                const progress = Math.round((completed / allConversations.length) * 100);
+                console.log(`Fetched threads for ${completed}/${allConversations.length} conversations (${progress}%)`);
+                broadcastProgress(`Fetching threads: ${completed}/${allConversations.length}`, {
+                    progress,
+                    current: completed,
+                    total: allConversations.length
+                });
             }
 
             broadcastProgress('Finished fetching threads', {
@@ -260,12 +318,11 @@ async function fetchConversationsWithPagination(
                 progressCallback(`Fetching page ${page}${totalPages > 1 ? '/' + totalPages : ''}...`);
             }
 
-            const response = await axios.get('https://api.helpscout.net/v2/conversations', {
-                params: pageParams,
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            const response = await makeRateLimitedRequest(
+                'https://api.helpscout.net/v2/conversations',
+                token,
+                pageParams
+            );
 
             // Add conversations from this page
             if (response.data._embedded && Array.isArray(response.data._embedded.conversations)) {
@@ -313,11 +370,10 @@ app.get('/api/tags', async (req, res) => {
             return res.status(401).json({ error: 'No token provided' });
         }
 
-        const response = await axios.get('https://api.helpscout.net/v2/tags', {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
+        const response = await makeRateLimitedRequest(
+            'https://api.helpscout.net/v2/tags',
+            token
+        );
 
         res.json(response.data);
     } catch (error: any) {
@@ -346,12 +402,11 @@ app.get('/api/conversation-count', async (req, res) => {
             status: 'all'
         };
 
-        const response = await axios.get('https://api.helpscout.net/v2/conversations', {
-            params,
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
+        const response = await makeRateLimitedRequest(
+            'https://api.helpscout.net/v2/conversations',
+            token,
+            params
+        );
 
         // Get the total count from the response
         const count = response.data.page?.totalElements || 0;
@@ -383,14 +438,11 @@ app.get('/api/tags-with-counts', async (req, res) => {
         while (hasMorePages) {
             console.log(`Fetching tags page ${page}...`);
 
-            const response = await axios.get('https://api.helpscout.net/v2/tags', {
-                params: {
-                    page: page
-                },
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            const response = await makeRateLimitedRequest(
+                'https://api.helpscout.net/v2/tags',
+                token,
+                { page: page }
+            );
 
             // Check if we have valid data
             if (!response.data._embedded || !Array.isArray(response.data._embedded.tags)) {
@@ -477,12 +529,11 @@ app.get('/api/count-conversations', async (req, res) => {
 
         if (tagList.length === 0) {
             // No tags specified, count all conversations matching other criteria
-            const response = await axios.get('https://api.helpscout.net/v2/conversations', {
-                params: { ...params, page: 1 },
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            const response = await makeRateLimitedRequest(
+                'https://api.helpscout.net/v2/conversations',
+                token,
+                { ...params, page: 1 }
+            );
 
             totalCount = response.data.page?.totalElements || 0;
         } else {
@@ -490,11 +541,10 @@ app.get('/api/count-conversations', async (req, res) => {
             console.log(`Counting conversations for ${tagList.length} tags: ${tagList.join(', ')}`);
 
             // First, get all tags to map slugs to display names
-            const tagsResponse = await axios.get('https://api.helpscout.net/v2/tags', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            const tagsResponse = await makeRateLimitedRequest(
+                'https://api.helpscout.net/v2/tags',
+                token
+            );
 
             const allTagsData = tagsResponse.data._embedded?.tags || [];
             const tagMap = new Map();
@@ -519,12 +569,11 @@ app.get('/api/count-conversations', async (req, res) => {
                 console.log(`Counting conversations for tag: ${tagSlug} (display name: ${tagName})`);
 
                 const tagParams = { ...params, tag: tagName };
-                const response = await axios.get('https://api.helpscout.net/v2/conversations', {
-                    params: { ...tagParams, page: 1 },
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
+                const response = await makeRateLimitedRequest(
+                    'https://api.helpscout.net/v2/conversations',
+                    token,
+                    { ...tagParams, page: 1 }
+                );
 
                 const tagCount = response.data.page?.totalElements || 0;
                 console.log(`Tag ${tagName} has ${tagCount} conversations`);

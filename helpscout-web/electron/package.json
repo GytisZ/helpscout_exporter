@@ -1,6 +1,6 @@
 {
     "name": "helpscout-exporter",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Help Scout Conversation Exporter",
     "main": "main.js",
     "scripts": {

@@ -48,10 +48,9 @@ For non-technical users, we also provide a web-based interface. See the [helpsco
 For the easiest experience, download the desktop application:
 
 1. Go to the [Releases](https://github.com/yourusername/helpscout-exporter/releases) page
-2. Download the appropriate installer for your platform:
-    - Windows: `Help-Scout-Exporter-Setup-x.x.x.exe`
-    - macOS: `Help-Scout-Exporter-x.x.x.dmg`
-    - Linux: `Help-Scout-Exporter-x.x.x.AppImage`
+2. Download the latest version (v1.1.0):
+    - macOS: `Help-Scout-Exporter-1.1.0.dmg`
+    - Alternative: `Help-Scout-Exporter-1.1.0-mac.zip`
 3. Run the installer and follow the prompts
 4. Launch the application from your desktop or start menu
 
