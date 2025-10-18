@@ -237,8 +237,18 @@ app.get('/api/conversations', async (req, res) => {
             const BATCH_SIZE = 10; // Process 10 conversations at a time
             let completed = 0;
 
+            console.log(`🚀 USING PARALLEL BATCH PROCESSING: ${allConversations.length} conversations in batches of ${BATCH_SIZE}`);
+            broadcastProgress(`Using parallel batch processing (${BATCH_SIZE} at a time)`, {
+                batchSize: BATCH_SIZE,
+                totalConversations: allConversations.length
+            });
+
             for (let i = 0; i < allConversations.length; i += BATCH_SIZE) {
                 const batch = allConversations.slice(i, i + BATCH_SIZE);
+                const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+                const totalBatches = Math.ceil(allConversations.length / BATCH_SIZE);
+
+                console.log(`📦 Processing batch ${batchNum}/${totalBatches} (${batch.length} conversations in parallel)`);
 
                 // Fetch all threads in this batch in parallel
                 await Promise.all(batch.map(async (conversation) => {
